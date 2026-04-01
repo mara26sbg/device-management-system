@@ -6,7 +6,7 @@
     <title>نظام العهد الإلكترونية</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-      :root {
+        :root {
             --primary: #2563eb;
             --success: #16a34a;
             --whatsapp: #25D366;
@@ -19,7 +19,7 @@
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
         body { background-color: var(--light); color: var(--dark); padding: 15px; line-height: 1.6; }
-        .container { max-width: 850px; margin: 0 auto; background: var(--white); border-radius: var(--radius); shadow: 0 10px 15px -3px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid var(--border); }
+        .container { max-width: 850px; margin: 0 auto; background: var(--white); border-radius: var(--radius); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid var(--border); }
         
         header { background: var(--primary); color: var(--white); padding: 25px; text-align: center; }
         header h2 { font-size: 1.8rem; letter-spacing: 1px; }
@@ -44,7 +44,7 @@
         .notification-box { display: none; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 8px; margin-top: 20px; text-align: center; }
         .btn-wa { background: var(--whatsapp); color: white; padding: 8px 15px; text-decoration: none; border-radius: 6px; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; margin: 5px; }
 
-        .card { background: #fff; border: 1px solid var(--border); padding: 15px; border-radius: 10px; margin-bottom: 15px; position: relative; }
+        .card { background: #fff; border: 1px solid var(--border); padding: 15px; border-radius: 10px; margin-bottom: 15px; position: relative; text-align: right; }
         .card h4 { color: var(--primary); margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
         .badge { position: absolute; left: 15px; top: 15px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
         .badge-active { background: #fef08a; color: #854d0e; }
@@ -89,11 +89,11 @@
                 <label>نوع الجهاز:</label>
                 <select id="deviceName" required>
                     <option value="">اختر الجهاز...</option>
-                    <option value="TAB">TAB </option>
-                    <option value="TAB">TAB </option>
+                    <option value="TAB 1">TAB 1</option>
+                    <option value="TAB 2">TAB 2</option>
                 </select>
             </div>
-            <button type="submit" class="btn btn-primary" id="saveBtn"><i class="fas fa-save"></i> حفظ </button>
+            <button type="submit" class="btn btn-primary" id="saveBtn"><i class="fas fa-save"></i> حفظ</button>
         </form>
 
         <div id="borrowWaBox" class="notification-box">
@@ -120,11 +120,10 @@
 </div>
 
 <script type="module">
-    // استيراد Firebase SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, addDoc, getDocs, updateDoc, doc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // إعدادات Firebase (استبدلها ببياناتك الخاصة)
+    // إعدادات Firebase الخاصة بك
     const firebaseConfig = {
         apiKey: "AIzaSyBg4l5LFpt5piDbpfH3-XfV470vrEY_LIQ",
         authDomain: "device-management-e4049.firebaseapp.com",
@@ -138,7 +137,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // دالة التبديل بين التبويبات
+    // ربط الدوال بالنافذة لتعمل مع التبويبات onclick
     window.switchTab = (id) => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -153,7 +152,7 @@
         if(id === 'history') fetchHistory();
     };
 
-    // حفظ عملية استعارة
+    // حفظ عملية استعارة جديدة
     document.getElementById('borrowForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('saveBtn');
@@ -174,7 +173,7 @@
         try {
             await addDoc(collection(db, "orders"), data);
             
-            // تجهيز روابط الواتساب
+            // روابط الواتساب
             const msg = `تأكيد استعارة: تم تسجيل جهاز (${data.device}) بعهدة ${data.recName} بتاريخ ${data.borrowDate}.`;
             document.getElementById('waRecBtn').href = `https://wa.me/968${data.recPhone}?text=${encodeURIComponent(msg)}`;
             document.getElementById('waGivBtn').href = `https://wa.me/968${data.givPhone}?text=${encodeURIComponent(msg)}`;
@@ -183,93 +182,105 @@
             document.getElementById('borrowForm').reset();
             alert("تم الحفظ بنجاح");
         } catch (err) {
-            console.error(err);
-            alert("خطأ في الاتصال بقاعدة البيانات");
+            console.error("Firebase Error:", err);
+            alert("خطأ في الاتصال: تأكد من ضبط قواعد الحماية (Rules) في Firebase على true");
         }
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-save"></i> حفظ';
     });
 
-    // جلب البيانات النشطة
+    // جلب العمليات النشطة
     async function fetchActive() {
         const container = document.getElementById('activeList');
-        container.innerHTML = 'جاري التحميل...';
-        const q = query(collection(db, "orders"), where("status", "==", "active"), orderBy("timestamp", "desc"));
-        const snap = await getDocs(q);
-        container.innerHTML = snap.empty ? '<p style="text-align:center">لا توجد عمليات نشطة حالياً</p>' : '';
-        
-        snap.forEach(d => {
-            const r = d.data();
-            container.innerHTML += `
-                <div class="card">
-                    <span class="badge badge-active">قيد الاستعارة</span>
-                    <h4>${r.device}</h4>
-                    <p><strong>المستلم:</strong> ${r.recName}</p>
-                    <p><strong>المُسلم:</strong> ${r.givName}</p>
-                    <p><strong>التاريخ:</strong> ${r.borrowDate}</p>
-                </div>
-            `;
-        });
+        container.innerHTML = '<p style="text-align:center">جاري التحميل...</p>';
+        try {
+            const q = query(collection(db, "orders"), where("status", "==", "active"), orderBy("timestamp", "desc"));
+            const snap = await getDocs(q);
+            container.innerHTML = snap.empty ? '<p style="text-align:center">لا توجد عمليات نشطة حالياً</p>' : '';
+            
+            snap.forEach(d => {
+                const r = d.data();
+                container.innerHTML += `
+                    <div class="card">
+                        <span class="badge badge-active">قيد الاستعارة</span>
+                        <h4>${r.device}</h4>
+                        <p><strong>المستلم:</strong> ${r.recName} (${r.recPhone})</p>
+                        <p><strong>المُسلم:</strong> ${r.givName}</p>
+                        <p><strong>التاريخ:</strong> ${r.borrowDate}</p>
+                    </div>
+                `;
+            });
+        } catch(e) { container.innerHTML = '<p style="color:red; text-align:center">خطأ في جلب البيانات</p>'; }
     }
 
-    // جلب البيانات للإرجاع
+    // جلب البيانات لتبويب الإرجاع
     window.fetchForReturn = async () => {
         const container = document.getElementById('returnList');
-        container.innerHTML = 'جاري التحميل...';
-        const q = query(collection(db, "orders"), where("status", "==", "active"));
-        const snap = await getDocs(q);
-        container.innerHTML = '';
-        
-        snap.forEach(d => {
-            const r = d.data();
-            const card = document.createElement('div');
-            card.className = 'card return-item';
-            card.dataset.phone = r.recPhone;
-            card.innerHTML = `
-                <h4>${r.device}</h4>
-                <p><strong>المستلم:</strong> ${r.recName} (${r.recPhone})</p>
-                <button class="btn btn-success" style="margin-top:10px" onclick="confirmReturn('${d.id}', '${r.recPhone}', '${r.device}')">تأكيد الإرجاع</button>
-            `;
-            container.appendChild(card);
-        });
+        container.innerHTML = '<p style="text-align:center">جاري التحميل...</p>';
+        try {
+            const q = query(collection(db, "orders"), where("status", "==", "active"), orderBy("timestamp", "desc"));
+            const snap = await getDocs(q);
+            container.innerHTML = '';
+            
+            snap.forEach(d => {
+                const r = d.data();
+                const card = document.createElement('div');
+                card.className = 'card return-item';
+                card.dataset.phone = r.recPhone;
+                card.innerHTML = `
+                    <h4>${r.device}</h4>
+                    <p><strong>المستلم:</strong> ${r.recName} (${r.recPhone})</p>
+                    <button class="btn btn-success" style="margin-top:10px" id="ret-btn-${d.id}">تأكيد الإرجاع</button>
+                `;
+                container.appendChild(card);
+                document.getElementById(`ret-btn-${d.id}`).onclick = () => confirmReturn(d.id, r.recPhone, r.device);
+            });
+        } catch(e) { container.innerHTML = '<p style="text-align:center">لا توجد أجهزة بانتظار الإرجاع</p>'; }
     };
 
-    // عملية الإرجاع
+    // تنفيذ عملية الإرجاع
     window.confirmReturn = async (id, phone, device) => {
-        if(!confirm("هل تم استلام الجهاز فعلاً؟")) return;
+        if(!confirm(`هل تم استلام (${device}) من المستلم؟`)) return;
         
-        const docRef = doc(db, "orders", id);
-        await updateDoc(docRef, { 
-            status: 'done',
-            returnDate: new Date().toLocaleDateString('en-GB')
-        });
-        
-        alert("تم الإرجاع بنجاح");
-        const msg = `تم استلام الجهاز (${device}) بنجاح وإغلاق العهدة. شكراً لكم.`;
-        window.open(`https://wa.me/968${phone}?text=${encodeURIComponent(msg)}`, '_blank');
-        fetchForReturn();
+        try {
+            const docRef = doc(db, "orders", id);
+            await updateDoc(docRef, { 
+                status: 'done',
+                returnDate: new Date().toLocaleDateString('en-GB'),
+                returnTimestamp: Date.now()
+            });
+            
+            alert("تم الإرجاع بنجاح");
+            const msg = `تم استلام الجهاز (${device}) بنجاح وإغلاق العهدة. شكراً لكم.`;
+            window.open(`https://wa.me/968${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+            fetchForReturn();
+        } catch (err) {
+            alert("حدث خطأ أثناء تحديث البيانات");
+        }
     };
 
-    // جلب السجل
+    // جلب سجل العمليات المكتملة
     async function fetchHistory() {
         const container = document.getElementById('historyList');
-        container.innerHTML = 'جاري التحميل...';
-        const q = query(collection(db, "orders"), where("status", "==", "done"), orderBy("timestamp", "desc"));
-        const snap = await getDocs(q);
-        container.innerHTML = snap.empty ? '<p style="text-align:center">السجل فارغ</p>' : '';
-        
-        snap.forEach(d => {
-            const r = d.data();
-            container.innerHTML += `
-                <div class="card">
-                    <span class="badge badge-done">مكتملة</span>
-                    <h4>${r.device}</h4>
-                    <p><strong>المستلم:</strong> ${r.recName}</p>
-                    <p><strong>تاريخ الاستعارة:</strong> ${r.borrowDate}</p>
-                    <p><strong>تاريخ الإرجاع:</strong> ${r.returnDate}</p>
-                </div>
-            `;
-        });
+        container.innerHTML = '<p style="text-align:center">جاري التحميل...</p>';
+        try {
+            const q = query(collection(db, "orders"), where("status", "==", "done"), orderBy("returnTimestamp", "desc"));
+            const snap = await getDocs(q);
+            container.innerHTML = snap.empty ? '<p style="text-align:center">السجل فارغ</p>' : '';
+            
+            snap.forEach(d => {
+                const r = d.data();
+                container.innerHTML += `
+                    <div class="card">
+                        <span class="badge badge-done">مكتملة</span>
+                        <h4>${r.device}</h4>
+                        <p><strong>المستلم:</strong> ${r.recName}</p>
+                        <p><strong>تاريخ الاستعارة:</strong> ${r.borrowDate}</p>
+                        <p><strong>تاريخ الإرجاع:</strong> ${r.returnDate || 'غير مسجل'}</p>
+                    </div>
+                `;
+            });
+        } catch(e) { container.innerHTML = '<p style="text-align:center">خطأ في جلب السجل</p>'; }
     }
 
     // فلترة البحث في صفحة الإرجاع
