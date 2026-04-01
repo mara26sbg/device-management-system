@@ -19,10 +19,10 @@
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
         body { background-color: var(--light); color: var(--dark); padding: 15px; }
-        .container { max-width: 850px; margin: 0 auto; background: var(--white); border-radius: var(--radius); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid var(--border); }
+        .container { max-width: 850px; margin: 0 auto; background: var(--white); border-radius: var(--radius); shadow: 0 10px 15px -3px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid var(--border); }
         
         header { background: var(--primary); color: var(--white); padding: 20px; text-align: center; }
-        .live-date { background: #1e4ed8; color: #bfdbfe; font-size: 0.9rem; padding: 5px; text-align: center; }
+        .live-date { background: #1e4ed8; color: #bfdbfe; font-size: 0.9rem; padding: 5px; text-align: center; font-weight: bold; }
 
         .tabs { display: flex; background: #f1f5f9; border-bottom: 2px solid var(--border); overflow-x: auto; }
         .tab-btn { flex: 1; padding: 15px 10px; border: none; background: none; cursor: pointer; font-size: 15px; font-weight: 600; color: #64748b; min-width: 100px; transition: 0.3s; }
@@ -41,7 +41,7 @@
         .btn-outline { background: white; border: 1px solid var(--border); color: var(--dark); }
         
         .notification-box { display: none; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 20px; border-radius: 8px; margin-top: 20px; text-align: center; }
-        .btn-wa { background: var(--whatsapp); color: white; padding: 12px 20px; border-radius: 6px; display: inline-flex; margin: 5px; }
+        .btn-wa { background: var(--whatsapp); color: white; padding: 12px 20px; border-radius: 6px; display: inline-flex; margin: 5px; text-decoration: none; font-weight: bold; }
 
         .card { background: #fff; border: 1px solid var(--border); padding: 15px; border-radius: 10px; margin-bottom: 15px; position: relative; text-align: right; }
         .card h4 { color: var(--primary); margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
@@ -51,21 +51,24 @@
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
+        /* إعدادات الطباعة الاحترافية */
         @media print {
+            @page { margin: 1cm; }
             body * { visibility: hidden; }
             #printable-area, #printable-area * { visibility: visible; }
-            #printable-area { position: absolute; left: 0; top: 0; width: 100%; padding: 40px; border: 1px solid #000; }
-            .no-print { display: none !important; }
+            #printable-area { position: absolute; left: 0; top: 0; width: 100%; display: block !important; border: none; }
+            /* إخفاء روابط المتصفح والوقت الافتراضي */
+            header, .tabs, .no-print, footer { display: none !important; }
         }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div class="container no-print">
     <header><h2>نظام العهد الإلكترونية</h2></header>
-    <div class="live-date" id="displayDate">جاري تحميل التاريخ...</div>
+    <div class="live-date" id="displayDate"></div>
 
-    <div class="tabs no-print">
+    <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('borrow')"><i class="fas fa-plus"></i> استعارة</button>
         <button class="tab-btn" onclick="switchTab('active-view')"><i class="fas fa-desktop"></i> العمليات النشطة</button>
         <button class="tab-btn" onclick="switchTab('return-view')"><i class="fas fa-undo"></i> إرجاع</button>
@@ -87,20 +90,17 @@
 
         <div id="borrowWaBox" class="notification-box">
             <p style="color: var(--success); font-weight: bold; margin-bottom: 15px;">تم حفظ البيانات بنجاح!</p>
-            <div id="lastActionCard" class="card" style="text-align: right; margin-bottom: 15px; border: 2px solid var(--success);">
-                </div>
-            <a href="#" id="waRecBtn" target="_blank" class="btn-wa"><i class="fab fa-whatsapp"></i> مراسلة المستلم</a>
-            <button class="btn btn-outline" onclick="printElement('lastActionCard')"><i class="fas fa-print"></i> طباعة إيصال الاستعارة</button>
+            <div id="lastActionCard" style="display:none"></div>
+            <a href="#" id="waRecBtn" target="_blank" class="btn-wa"><i class="fab fa-whatsapp"></i> مراسلة المستلم عبر الواتساب</a>
+            <button class="btn btn-outline" onclick="prepareAndPrint('lastActionCard')"><i class="fas fa-print"></i> طباعة إيصال العهدة</button>
         </div>
     </div>
 
     <div id="active-view" class="tab-content"><div id="activeList"></div></div>
-
     <div id="return-view" class="tab-content">
         <input type="text" id="searchReturn" placeholder="ابحث برقم هاتف المستلم..." onkeyup="filterReturn()" style="margin-bottom: 15px;">
         <div id="returnList"></div>
     </div>
-
     <div id="history" class="tab-content"><div id="historyList"></div></div>
 </div>
 
@@ -123,12 +123,10 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // دالة التاريخ المحدثة
     function getFullDate() {
         return new Date().toLocaleDateString('ar-OM', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     }
     
-    // عرض التاريخ فور فتح الصفحة
     document.getElementById('displayDate').innerText = getFullDate();
 
     window.switchTab = (id) => {
@@ -141,7 +139,6 @@
         if(id === 'history') fetchHistory();
     };
 
-    // حفظ الاستعارة
     document.getElementById('borrowForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('saveBtn');
@@ -161,27 +158,27 @@
         try {
             await addDoc(collection(db, "orders"), data);
             
-            // تحديث بطاقة الطباعة الفورية
+            // تجهيز بيانات الطباعة الفورية
             document.getElementById('lastActionCard').innerHTML = `
-                <h4>إيصال استعارة عهدة</h4>
-                <p><strong>الجهاز:</strong> ${data.device}</p>
-                <p><strong>المستلم:</strong> ${data.recName}</p>
-                <p><strong>التاريخ:</strong> ${data.borrowDate}</p>
+                <div class="card">
+                    <h4>إيصال استلام عهدة (نشط)</h4>
+                    <p><strong>اسم الجهاز:</strong> ${data.device}</p>
+                    <p><strong>المستلم:</strong> ${data.recName}</p>
+                    <p><strong>المُسلم:</strong> ${data.givName}</p>
+                    <p><strong>تاريخ الاستعارة:</strong> ${data.borrowDate}</p>
+                </div>
             `;
 
-            // إصلاح رابط الواتساب للكمبيوتر والهاتف
             const msg = `نظام العهد: تم تسجيل جهاز (${data.device}) بعهدة ${data.recName} بتاريخ ${data.borrowDate}.`;
-            const waUrl = `https://api.whatsapp.com/send?phone=968${data.recPhone}&text=${encodeURIComponent(msg)}`;
-            document.getElementById('waRecBtn').href = waUrl;
+            document.getElementById('waRecBtn').href = `https://api.whatsapp.com/send?phone=968${data.recPhone}&text=${encodeURIComponent(msg)}`;
             
             document.getElementById('borrowWaBox').style.display = 'block';
             document.getElementById('borrowForm').reset();
-            alert("تم الحفظ بنجاح");
-        } catch (err) { alert("خطأ في قاعدة البيانات"); }
+            alert("تم حفظ البيانات بنجاح");
+        } catch (err) { alert("خطأ في الاتصال"); }
         btn.disabled = false;
     });
 
-    // جلب العمليات النشطة (بدون orderBy لتجنب مشكلة الـ Index)
     async function fetchActive() {
         const container = document.getElementById('activeList');
         container.innerHTML = 'جاري التحميل...';
@@ -189,17 +186,18 @@
             const snap = await getDocs(query(collection(db, "orders"), where("status", "==", "active")));
             let docs = [];
             snap.forEach(d => docs.push({id: d.id, ...d.data()}));
-            docs.sort((a, b) => b.timestamp - a.timestamp); // ترتيب يدوي لضمان الظهور
+            docs.sort((a, b) => b.timestamp - a.timestamp);
 
-            container.innerHTML = docs.length === 0 ? '<p style="text-align:center">لا توجد عمليات</p>' : '';
+            container.innerHTML = docs.length === 0 ? '<p style="text-align:center">لا توجد عهد نشطة</p>' : '';
             docs.forEach(r => {
+                const cardId = `card-act-${r.id}`;
                 container.innerHTML += `
-                    <div class="card" id="card-${r.id}">
-                        <span class="badge badge-active">نشط</span>
+                    <div class="card" id="${cardId}">
+                        <span class="badge badge-active no-print">نشط</span>
                         <h4>جهاز: ${r.device}</h4>
                         <p><strong>المستلم:</strong> ${r.recName}</p>
-                        <p><strong>التاريخ:</strong> ${r.borrowDate}</p>
-                        <button class="btn btn-outline" onclick="printElement('card-${r.id}')"><i class="fas fa-print"></i> طباعة</button>
+                        <p><strong>تاريخ الاستعارة:</strong> ${r.borrowDate}</p>
+                        <button class="btn btn-outline no-print" onclick="prepareAndPrint('${cardId}')"><i class="fas fa-print"></i> طباعة الإيصال</button>
                     </div>`;
             });
         } catch(e) { container.innerHTML = "خطأ في جلب البيانات"; }
@@ -218,7 +216,7 @@
             div.innerHTML = `
                 <h4>جهاز: ${r.device}</h4>
                 <p><strong>المستلم:</strong> ${r.recName} (${r.recPhone})</p>
-                <p><strong>تاريخ الاستلام:</strong> ${r.borrowDate}</p>
+                <p><strong>تاريخ الاستعارة:</strong> ${r.borrowDate}</p>
                 <button class="btn btn-success" id="btn-${d.id}"><i class="fas fa-check"></i> تأكيد الإرجاع</button>
             `;
             container.appendChild(div);
@@ -227,12 +225,10 @@
     };
 
     window.confirmReturn = async (id, phone, device, name) => {
-        if(!confirm(`هل استلمت ${device} من ${name}؟`)) return;
+        if(!confirm(`تأكيد استلام ${device} من ${name}؟`)) return;
         const rDate = getFullDate();
         await updateDoc(doc(db, "orders", id), { status: 'done', returnDate: rDate, returnTimestamp: Date.now() });
-        
-        const msg = `نظام العهد: تم استلام (${device}) من ${name} بتاريخ ${rDate}. شكراً لكم.`;
-        window.open(`https://api.whatsapp.com/send?phone=968${phone}&text=${encodeURIComponent(msg)}`, '_blank');
+        window.open(`https://api.whatsapp.com/send?phone=968${phone}&text=${encodeURIComponent("نظام العهد: تم استلام ("+device+") بنجاح بتاريخ "+rDate)}`, '_blank');
         fetchForReturn();
     };
 
@@ -246,35 +242,45 @@
 
         container.innerHTML = docs.length === 0 ? '<p style="text-align:center">السجل فارغ</p>' : '';
         docs.forEach(r => {
+            const cardId = `card-hist-${r.id}`;
             container.innerHTML += `
-                <div class="card" id="card-${r.id}">
-                    <span class="badge badge-done">مكتمل</span>
+                <div class="card" id="${cardId}">
+                    <span class="badge badge-done no-print">مكتمل</span>
                     <h4>جهاز: ${r.device}</h4>
                     <p><strong>المستلم:</strong> ${r.recName}</p>
                     <p><strong>تاريخ الاستعارة:</strong> ${r.borrowDate}</p>
                     <p><strong>تاريخ الإرجاع:</strong> ${r.returnDate}</p>
-                    <button class="btn btn-outline" onclick="printElement('card-${r.id}')"><i class="fas fa-print"></i> طباعة</button>
+                    <button class="btn btn-outline no-print" onclick="prepareAndPrint('${cardId}')"><i class="fas fa-print"></i> طباعة السجل</button>
                 </div>`;
         });
     }
 
-    // دالة الطباعة المخصصة
-    window.printElement = (elementId) => {
-        const content = document.getElementById(elementId).innerHTML;
+    // إصلاح دالة الطباعة لضمان نقل البيانات
+    window.prepareAndPrint = (elementId) => {
+        const element = document.getElementById(elementId);
         const printArea = document.getElementById('printable-area');
+        
+        // جلب المحتوى مع إزالة الأزرار منه للطباعة
+        let cleanContent = element.innerHTML;
+        cleanContent = cleanContent.replace(/<button.*?<\/button>/g, ''); // حذف أي أزرار في المحتوى
+
         printArea.innerHTML = `
-            <div style="direction: rtl; text-align: center; border: 2px solid #000; padding: 20px;">
-                <h2 style="margin-bottom: 20px;">إيصال نظام العهد الإلكترونية</h2>
-                <hr>
-                <div style="text-align: right; margin-top: 20px; font-size: 1.2rem;">
-                    ${content}
+            <div style="direction: rtl; text-align: center; border: 3px double #000; padding: 30px; background: #fff;">
+                <h1 style="margin-bottom: 10px; color: #2563eb;">نظام العهد الإلكترونية</h1>
+                <p style="margin-bottom: 20px; font-size: 1.1rem; border-bottom: 1px solid #000; padding-bottom: 10px;">إيصال رسمي لإثبات الحالة</p>
+                <div style="text-align: right; line-height: 2; font-size: 1.3rem;">
+                    ${cleanContent}
                 </div>
-                <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 10px; font-size: 0.8rem;">
-                    تمت الطباعة بتاريخ: ${getFullDate()}
+                <div style="margin-top: 50px; text-align: center; font-size: 0.9rem;">
+                    تاريخ طباعة التقرير: ${getFullDate()}
                 </div>
             </div>
         `;
-        window.print();
+
+        // تأخير بسيط لضمان تحميل المحتوى في المتصفح قبل عرض نافذة الطباعة
+        setTimeout(() => {
+            window.print();
+        }, 300);
     };
 
     window.filterReturn = () => {
